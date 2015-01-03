@@ -1,4 +1,6 @@
 """pybloom
 
 """
-from pybloom import BloomFilter, ScalableBloomFilter, __version__, __author__
+
+from .pybloom import BloomFilter, ScalableBloomFilter
+

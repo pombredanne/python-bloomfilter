@@ -7,7 +7,7 @@ Requires the bitarray library: http://pypi.python.org/pypi/bitarray/
 
     >>> from pybloom import BloomFilter
     >>> f = BloomFilter(capacity=10000, error_rate=0.001)
-    >>> for i in xrange(0, f.capacity):
+    >>> for i in range_fn(0, f.capacity):
     ...     _ = f.add(i)
     ...
     >>> 0 in f
@@ -22,7 +22,7 @@ Requires the bitarray library: http://pypi.python.org/pypi/bitarray/
     >>> from pybloom import ScalableBloomFilter
     >>> sbf = ScalableBloomFilter(mode=ScalableBloomFilter.SMALL_SET_GROWTH)
     >>> count = 10000
-    >>> for i in xrange(0, count):
+    >>> for i in range_fn(0, count):
     ...     _ = sbf.add(i)
     ...
     >>> sbf.capacity > count
@@ -33,8 +33,10 @@ Requires the bitarray library: http://pypi.python.org/pypi/bitarray/
     True
 
 """
+from __future__ import absolute_import
 import math
 import hashlib
+from pybloom.utils import range_fn, is_string_io, running_python_3
 from struct import unpack, pack, calcsize
 
 try:
@@ -45,7 +47,9 @@ except ImportError:
 __version__ = '2.0'
 __author__  = "Jay Baird <jay.baird@me.com>, Bob Ippolito <bob@redivi.com>,\
                Marius Eriksen <marius@monkey.org>,\
-               Alex Brasetvik <alex@brasetvik.com>"
+               Alex Brasetvik <alex@brasetvik.com>,\
+               Matt Bachmann <bachmann.matt@gmail.com>,\
+              "
 
 def make_hashfuncs(num_slices, num_bits):
     if num_bits >= (1 << 31):
@@ -69,24 +73,33 @@ def make_hashfuncs(num_slices, num_bits):
     num_salts, extra = divmod(num_slices, len(fmt))
     if extra:
         num_salts += 1
-    salts = [hashfn(hashfn(pack('I', i)).digest()) for i in xrange(num_salts)]
+    salts = tuple(hashfn(hashfn(pack('I', i)).digest()) for i in range_fn(num_salts))
     def _make_hashfuncs(key):
-        if isinstance(key, unicode):
-            key = key.encode('utf-8')
+        if running_python_3:
+            if isinstance(key, str):
+                key = key.encode('utf-8')
+            else:
+                key = str(key).encode('utf-8')
         else:
-            key = str(key)
-        rval = []
+            if isinstance(key, unicode):
+                key = key.encode('utf-8')
+            else:
+                key = str(key)
+        i = 0
         for salt in salts:
             h = salt.copy()
             h.update(key)
-            rval.extend(uint % num_bits for uint in unpack(fmt, h.digest()))
-        del rval[num_slices:]
-        return rval
+            for uint in unpack(fmt, h.digest()):
+                yield uint % num_bits
+                i += 1
+                if i >= num_slices:
+                    return
+
     return _make_hashfuncs
 
 
 class BloomFilter(object):
-    FILE_FMT = '<dQQQQ'
+    FILE_FMT = b'<dQQQQ'
 
     def __init__(self, capacity, error_rate=0.001):
         """Implements a space-efficient probabilistic data structure
@@ -146,10 +159,7 @@ class BloomFilter(object):
         """
         bits_per_slice = self.bits_per_slice
         bitarray = self.bitarray
-        if not isinstance(key, list):
-            hashes = self.make_hashes(key)
-        else:
-            hashes = key
+        hashes = self.make_hashes(key)
         offset = 0
         for k in hashes:
             if not bitarray[offset + k]:
@@ -170,21 +180,31 @@ class BloomFilter(object):
         False
         >>> b.add("hello")
         True
+        >>> b.count
+        1
 
         """
         bitarray = self.bitarray
         bits_per_slice = self.bits_per_slice
         hashes = self.make_hashes(key)
-        if not skip_check and hashes in self:
-            return True
+        found_all_bits = True
         if self.count > self.capacity:
             raise IndexError("BloomFilter is at capacity")
         offset = 0
         for k in hashes:
+            if not skip_check and found_all_bits and not bitarray[offset + k]:
+                found_all_bits = False
             self.bitarray[offset + k] = True
             offset += bits_per_slice
-        self.count += 1
-        return False
+
+        if skip_check:
+            self.count += 1
+            return False
+        elif not found_all_bits:
+            self.count += 1
+            return False
+        else:
+            return True
 
     def copy(self):
         """Return a copy of this bloom filter.
@@ -208,7 +228,7 @@ both the same capacity and error rate")
         return self.union(other)
 
     def intersection(self, other):
-        """ Calculates the union of the two underlying bitarrays and returns
+        """ Calculates the intersection of the two underlying bitarrays and returns
         a new bloom filter object."""
         if self.capacity != other.capacity or \
             self.error_rate != other.error_rate:
@@ -227,7 +247,8 @@ have equal capacity and error rate")
         efficient than pickling the object."""
         f.write(pack(self.FILE_FMT, self.error_rate, self.num_slices,
                      self.bits_per_slice, self.capacity, self.count))
-        self.bitarray.tofile(f)
+        (f.write(self.bitarray.tobytes()) if is_string_io(f)
+         else self.bitarray.tofile(f))
 
     @classmethod
     def fromfile(cls, f, n=-1):
@@ -236,19 +257,21 @@ have equal capacity and error rate")
         headerlen = calcsize(cls.FILE_FMT)
 
         if 0 < n < headerlen:
-            raise ValueError, 'n too small!'
+            raise ValueError('n too small!')
 
         filter = cls(1)  # Bogus instantiation, we will `_setup'.
         filter._setup(*unpack(cls.FILE_FMT, f.read(headerlen)))
         filter.bitarray = bitarray.bitarray(endian='little')
         if n > 0:
-            filter.bitarray.fromfile(f, n - headerlen)
+            (filter.bitarray.frombytes(f.read(n-headerlen)) if is_string_io(f)
+             else filter.bitarray.fromfile(f, n - headerlen))
         else:
-            filter.bitarray.fromfile(f)
+            (filter.bitarray.frombytes(f.read()) if is_string_io(f)
+             else filter.bitarray.fromfile(f))
         if filter.num_bits != filter.bitarray.length() and \
                (filter.num_bits + (8 - filter.num_bits % 8)
                 != filter.bitarray.length()):
-            raise ValueError, 'Bit length mismatch!'
+            raise ValueError('Bit length mismatch!')
 
         return filter
 
@@ -356,7 +379,7 @@ class ScalableBloomFilter(object):
     @property
     def capacity(self):
         """Returns the total capacity for all filters in this SBF"""
-        return sum([f.capacity for f in self.filters])
+        return sum(f.capacity for f in self.filters)
 
     @property
     def count(self):
@@ -369,14 +392,14 @@ class ScalableBloomFilter(object):
                      self.initial_capacity, self.error_rate))
 
         # Write #-of-filters
-        f.write(pack('<l', len(self.filters)))
+        f.write(pack(b'<l', len(self.filters)))
 
         if len(self.filters) > 0:
             # Then each filter directly, with a header describing
             # their lengths.
             headerpos = f.tell()
-            headerfmt = '<' + 'Q'*(len(self.filters))
-            f.write('.' * calcsize(headerfmt))
+            headerfmt = b'<' + b'Q'*(len(self.filters))
+            f.write(b'.' * calcsize(headerfmt))
             filter_sizes = []
             for filter in self.filters:
                 begin = f.tell()
@@ -391,9 +414,9 @@ class ScalableBloomFilter(object):
         """Deserialize the ScalableBloomFilter in file object `f'."""
         filter = cls()
         filter._setup(*unpack(cls.FILE_FMT, f.read(calcsize(cls.FILE_FMT))))
-        nfilters, = unpack('<l', f.read(calcsize('<l')))
+        nfilters, = unpack(b'<l', f.read(calcsize(b'<l')))
         if nfilters > 0:
-            header_fmt = '<' + 'Q'*nfilters
+            header_fmt = b'<' + b'Q'*nfilters
             bytes = f.read(calcsize(header_fmt))
             filter_lengths = unpack(header_fmt, bytes)
             for fl in filter_lengths:
@@ -405,7 +428,7 @@ class ScalableBloomFilter(object):
 
     def __len__(self):
         """Returns the total number of elements stored in this SBF"""
-        return sum([f.count for f in self.filters])
+        return sum(f.count for f in self.filters)
 
 
 if __name__ == "__main__":
