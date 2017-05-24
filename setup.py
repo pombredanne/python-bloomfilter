@@ -33,8 +33,16 @@ setup(
     url="https://github.com/growbots/python-bloomfilter",
     license="MIT License",
     platforms=["any"],
-    test_suite="pybloom2.tests",
     zip_safe=True,
-    install_requires=["bitarray>=0.3.4"],
+    install_requires=[
+        "bitarray>=0.3.4",
+    ],
+    extras_require={
+        "tests": [
+            "flake8",
+            "pytest",
+            "pytest-flake8",
+        ],
+    },
     packages=["pybloom2"]
 )
