@@ -24,6 +24,7 @@ setup(
     zip_safe=True,
 
     author="Growbots",
+    author_email="it@growbots.com",
     url="https://github.com/growbots/python-bloomfilter",
     license="MIT License",
 
