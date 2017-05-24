@@ -1,21 +1,22 @@
-#!/usr/bin/env python
+import codecs
+import os.path
 from setuptools import setup
 
 
-VERSION = "2.0.0"
-DESCRIPTION = "PyBloom2: A Probabilistic data structure"
-LONG_DESCRIPTION = """
-pybloom2 is a Python implementation of the bloom filter probabilistic data
-structure. The module also provides a Scalable Bloom Filter that allows a
-bloom filter to grow without knowing the original set size.
-"""
+here = os.path.abspath(os.path.dirname(__file__))
+
+with codecs.open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
+    long_description = f.read()
 
 
 setup(
     name="pybloom2",
-    version=VERSION,
-    description=DESCRIPTION,
-    long_description=LONG_DESCRIPTION,
+    use_scm_version={
+        "root": here,
+        "write_to": os.path.join(here, "pybloom2/_version.py"),
+    },
+    description="PyBloom2: A Probabilistic data structure",
+    long_description=long_description,
     keywords=("data structures", "bloom filter", "bloom", "filter",
               "probabilistic", "set"),
     packages=["pybloom2"],
@@ -26,6 +27,9 @@ setup(
     url="https://github.com/growbots/python-bloomfilter",
     license="MIT License",
 
+    setup_requires=[
+        "setuptools_scm>=1.10.1,<2.0.0",
+    ],
     install_requires=[
         "bitarray>=0.3.4",
     ],

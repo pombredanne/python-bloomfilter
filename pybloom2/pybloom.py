@@ -41,13 +41,6 @@ import bitarray
 
 from pybloom2.utils import is_bytes_io
 
-__version__ = "2.0"
-__author__ = "Jay Baird <jay.baird@me.com>, Bob Ippolito <bob@redivi.com>,\
-              Marius Eriksen <marius@monkey.org>,\
-              Alex Brasetvik <alex@brasetvik.com>,\
-              Matt Bachmann <bachmann.matt@gmail.com>,\
-             "
-
 
 def make_hashfuncs(num_slices, num_bits):
     if num_bits >= (1 << 31):

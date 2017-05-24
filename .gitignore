@@ -1,7 +1,9 @@
 *.egg
 *.pyc
 *.egg-info
+*.eggs
 build
 dist
 .venv
 .tox
+pybloom2/_version.py
