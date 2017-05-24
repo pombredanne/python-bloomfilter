@@ -4,14 +4,13 @@
 import sys
 from pybloom2 import BloomFilter
 import bitarray, math, time
-from pybloom2.utils import range_fn
 
 
 def main(capacity=100000, request_error_rate=0.1):
     f = BloomFilter(capacity=capacity, error_rate=request_error_rate)
     assert (capacity == f.capacity)
     start = time.time()
-    for i in range_fn(0, f.capacity):
+    for i in range(f.capacity):
         f.add(i, skip_check=True)
     end = time.time()
     print("{:5.3f} seconds to add to capacity, {:10.2f} entries/second".format(
@@ -30,7 +29,7 @@ def main(capacity=100000, request_error_rate=0.1):
     trials = f.capacity
     fp = 0
     start = time.time()
-    for i in range_fn(f.capacity, f.capacity + trials + 1):
+    for i in range(f.capacity, f.capacity + trials + 1):
         if i in f:
             fp += 1
     end = time.time()

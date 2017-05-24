@@ -1,12 +1,7 @@
 from __future__ import absolute_import
 from pybloom2.pybloom import BloomFilter, ScalableBloomFilter
-from pybloom2.utils import running_python_3, range_fn
 
-try:
-    from StringIO import StringIO
-    import cStringIO
-except ImportError:
-    from io import BytesIO as StringIO
+from io import BytesIO as StringIO
 import os
 import doctest
 import unittest
@@ -26,7 +21,7 @@ class TestUnionIntersection(unittest.TestCase):
     def test_union(self):
         bloom_one = BloomFilter(100, 0.001)
         bloom_two = BloomFilter(100, 0.001)
-        chars = [chr(i) for i in range_fn(97, 123)]
+        chars = [chr(i) for i in range(97, 123)]
         for char in chars[int(len(chars)/2):]:
             bloom_one.add(char)
         for char in chars[:int(len(chars)/2)]:
@@ -38,7 +33,7 @@ class TestUnionIntersection(unittest.TestCase):
     def test_intersection(self):
         bloom_one = BloomFilter(100, 0.001)
         bloom_two = BloomFilter(100, 0.001)
-        chars = [chr(i) for i in range_fn(97, 123)]
+        chars = [chr(i) for i in range(97, 123)]
         for char in chars:
             bloom_one.add(char)
         for char in chars[:int(len(chars)/2)]:
@@ -79,7 +74,7 @@ class TestUnionIntersection(unittest.TestCase):
 
 class Serialization(unittest.TestCase):
     SIZE = 12345
-    EXPECTED = set([random.randint(0, 10000100) for _ in range_fn(SIZE)])
+    EXPECTED = set([random.randint(0, 10000100) for _ in range(SIZE)])
 
     def test_serialization(self):
         for klass, args in [(BloomFilter, (self.SIZE,)),
@@ -93,10 +88,6 @@ class Serialization(unittest.TestCase):
             stringio = StringIO()
             filter.tofile(stringio)
             streams_to_test = [f, stringio]
-            if not running_python_3:
-                cstringio = cStringIO.StringIO()
-                filter.tofile(cstringio)
-                streams_to_test.append(cstringio)
 
             del filter
 

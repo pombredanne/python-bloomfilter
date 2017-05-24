@@ -7,7 +7,7 @@ Requires the bitarray library: http://pypi.python.org/pypi/bitarray/
 
     >>> from pybloom2 import BloomFilter
     >>> f = BloomFilter(capacity=10000, error_rate=0.001)
-    >>> for i in range_fn(0, f.capacity):
+    >>> for i in range(f.capacity):
     ...     _ = f.add(i)
     ...
     >>> 0 in f
@@ -22,7 +22,7 @@ Requires the bitarray library: http://pypi.python.org/pypi/bitarray/
     >>> from pybloom2 import ScalableBloomFilter
     >>> sbf = ScalableBloomFilter(mode=ScalableBloomFilter.SMALL_SET_GROWTH)
     >>> count = 10000
-    >>> for i in range_fn(0, count):
+    >>> for i in range(count):
     ...     _ = sbf.add(i)
     ...
     >>> sbf.capacity > count
@@ -36,7 +36,7 @@ Requires the bitarray library: http://pypi.python.org/pypi/bitarray/
 from __future__ import absolute_import
 import math
 import hashlib
-from pybloom2.utils import range_fn, is_string_io, running_python_3
+from pybloom2.utils import is_string_io
 from struct import unpack, pack, calcsize
 
 try:
@@ -73,18 +73,12 @@ def make_hashfuncs(num_slices, num_bits):
     num_salts, extra = divmod(num_slices, len(fmt))
     if extra:
         num_salts += 1
-    salts = tuple(hashfn(hashfn(pack('I', i)).digest()) for i in range_fn(num_salts))
+    salts = tuple(hashfn(hashfn(pack('I', i)).digest()) for i in range(num_salts))
     def _make_hashfuncs(key):
-        if running_python_3:
-            if isinstance(key, str):
-                key = key.encode('utf-8')
-            else:
-                key = str(key).encode('utf-8')
+        if isinstance(key, str):
+            key = key.encode('utf-8')
         else:
-            if isinstance(key, unicode):
-                key = key.encode('utf-8')
-            else:
-                key = str(key)
+            key = str(key).encode('utf-8')
         i = 0
         for salt in salts:
             h = salt.copy()
