@@ -1,17 +1,18 @@
+import string
+
 import pytest
 
-from pybloom2.pybloom import BloomFilter, ScalableBloomFilter
+from pybloom2.pybloom import BloomFilter
 
 
 def test_union():
     bloom_one = BloomFilter(100, 0.001)
     bloom_two = BloomFilter(100, 0.001)
-    chars = [chr(i) for i in range(97, 123)]
+    chars = string.ascii_lowercase
 
-    for char in chars[int(len(chars)/2):]:
+    for char in chars[int(len(chars) / 2):]:
         bloom_one.add(char)
-
-    for char in chars[:int(len(chars)/2)]:
+    for char in chars[:int(len(chars) / 2)]:
         bloom_two.add(char)
 
     new_bloom = bloom_one.union(bloom_two)
@@ -23,21 +24,18 @@ def test_union():
 def test_intersection():
     bloom_one = BloomFilter(100, 0.001)
     bloom_two = BloomFilter(100, 0.001)
-
-    chars = [chr(i) for i in range(97, 123)]
+    chars = string.ascii_lowercase
 
     for char in chars:
         bloom_one.add(char)
-
-    for char in chars[:int(len(chars)/2)]:
+    for char in chars[:int(len(chars) / 2)]:
         bloom_two.add(char)
 
     new_bloom = bloom_one.intersection(bloom_two)
 
-    for char in chars[:int(len(chars)/2)]:
+    for char in chars[:int(len(chars) / 2)]:
         assert char in new_bloom
-
-    for char in chars[int(len(chars)/2):]:
+    for char in chars[int(len(chars) / 2):]:
         assert char not in new_bloom
 
 
