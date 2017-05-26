@@ -172,7 +172,7 @@ class BloomFilter(object):
         1
 
         """
-        if self.count > self.capacity:
+        if self.count >= self.capacity:
             raise IndexError("BloomFilter is at capacity")
 
         hashes = self.make_hashes(key)
