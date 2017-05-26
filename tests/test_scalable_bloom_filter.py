@@ -1,6 +1,3 @@
-import random
-import string
-
 import pytest
 
 from pybloom2.pybloom import ScalableBloomFilter
@@ -70,31 +67,3 @@ def test_multiple_bloom_filters():
 
     for i in range(test_size):
         assert i in sbf
-
-
-def test_error_rate():
-    test_size = 1000
-    error_rate = 0.01
-    sbf = ScalableBloomFilter(initial_capacity=5, error_rate=error_rate)
-
-    random_strings = []
-    for _ in range(2 * test_size):
-        length = random.randint(3, 9)
-        random_string = "".join(random.choice(string.ascii_letters)
-                                for _ in range(length))
-        random_strings.append(random_string)
-
-    strings_to_add = random_strings[:test_size]
-    strings_to_check = random_strings[test_size:]
-
-    for s in strings_to_add:
-        sbf.add(s)
-
-    false_positives_count = 0
-    for s in strings_to_check:
-        if s in sbf:
-            false_positives_count += 1
-
-    true_error_rate = false_positives_count / float(len(strings_to_check))
-
-    assert true_error_rate <= error_rate
